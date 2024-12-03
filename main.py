@@ -3,7 +3,7 @@ import pygame
 
 # Initialize the game
 pygame.init()
-screen = pygame.display.set_mode((1280, 720))
+screen = pygame.display.set_mode((609, 791))
 clock = pygame.time.Clock()
 running = True
 
@@ -13,8 +13,8 @@ background_image = pygame.image.load('assets/background.png')
 
 # Player settings
 player_rect = player_image.get_rect()
-player_rect.topleft = (640, 360)
-player_speed = 5
+player_rect.topleft = (300, 360)
+player_speed = 15
 
 # Game loop
 while running:
