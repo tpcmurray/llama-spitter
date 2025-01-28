@@ -3,7 +3,11 @@ import pygame
 
 # Initialize the game
 pygame.init()
+pygame.mixer.music.load('assets/background-music.mp3')
+pygame.mixer.music.play(-1)  # -1 means loop indefinitely
+pygame.mixer.music.set_volume(0.5)
 screen = pygame.display.set_mode((609, 791))
+pygame.display.set_caption("Llama Spitter")
 clock = pygame.time.Clock()
 running = True
 
