@@ -1,5 +1,6 @@
 # let's make llama spitter!
 import pygame
+import random
 
 # Initialize the game
 pygame.init()
@@ -15,7 +16,14 @@ running = True
 player_sheet = pygame.image.load('assets/player_sheet.png')
 background_image = pygame.image.load('assets/background.png')
 spit_image = pygame.image.load('assets/spit.png')
-spit_sound = pygame.mixer.Sound('assets/spit1.mp3')
+spit_sounds = [
+    pygame.mixer.Sound('assets/spit1.mp3'),
+    pygame.mixer.Sound('assets/spit2.mp3'),
+    pygame.mixer.Sound('assets/spit3.mp3')
+]
+
+def get_random_spit_sound():
+    return random.choice(spit_sounds)
 
 class Spit:
     def __init__(self, x, y, direction):
@@ -85,7 +93,7 @@ while running:
                     spit_y -= 45
 
                 spits.append(Spit(spit_x, spit_y, player_direction))
-                spit_sound.play()
+                get_random_spit_sound().play()
 
     # Get keys
     keys = pygame.key.get_pressed()
