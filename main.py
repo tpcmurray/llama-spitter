@@ -165,6 +165,10 @@ def get_player_image(direction, frame):
     col = frame % 4
     return player_sheet.subsurface(pygame.Rect(col * 80, row * 80, 80, 80))
 
+def get_collision_rect(rect):
+    """Returns a smaller rectangle for collision detection"""
+    return pygame.Rect(rect.x + 10, rect.y + 10, rect.width - 20, rect.height - 20)
+
 def check_collisions(spits, enemies):
     global score
     spits_to_remove = set()
@@ -172,11 +176,13 @@ def check_collisions(spits, enemies):
     
     for spit_idx, spit in enumerate(spits):
         for enemy_idx, enemy in enumerate(enemies):
-            if spit.rect.colliderect(enemy.rect):
+            # Use smaller collision rect for enemy
+            enemy_collision_rect = get_collision_rect(enemy.rect)
+            if spit.rect.colliderect(enemy_collision_rect):
                 spits_to_remove.add(spit_idx)
                 enemies_to_remove.add(enemy_idx)
-                score += 100  # Add 100 points for each enemy hit
-                get_random_death_sound().play()  # Play random death sound
+                score += 100
+                get_random_death_sound().play()
     
     # Remove collided objects
     return (
@@ -187,11 +193,14 @@ def check_collisions(spits, enemies):
 def check_player_hit(player_rect, enemy_spits):
     global player_health, player_alive
     was_hit = False
+    # Use smaller collision rect for player
+    player_collision_rect = get_collision_rect(player_rect)
+    
     for spit in enemy_spits:
-        if spit.rect.colliderect(player_rect):
-            player_health -= 10  # Decrease health by 10 for each hit
+        if spit.rect.colliderect(player_collision_rect):
+            player_health -= 10
             was_hit = True
-            enemy_spits.remove(spit)  # Remove spit that hit player
+            enemy_spits.remove(spit)
             
     if player_health <= 0:
         player_alive = False
