@@ -31,11 +31,21 @@ death_sounds = [
     pygame.mixer.Sound('assets/llama_death3.mp3')
 ]
 
+# After pygame.init()
+pygame.mixer.set_num_channels(16)  # Increase number of available sound channels
+available_channels = [pygame.mixer.Channel(i) for i in range(8, 16)]  # Reserve channels 8-15 for death sounds
+
 def get_random_spit_sound():
     return random.choice(spit_sounds)
 
-def get_random_death_sound():
-    return random.choice(death_sounds)
+# Replace get_random_death_sound function
+def play_random_death_sound():
+    sound = random.choice(death_sounds)
+    # Find first available channel
+    for channel in available_channels:
+        if not channel.get_busy():
+            channel.play(sound)
+            break
 
 class Spit:
     def __init__(self, x, y, direction):
@@ -169,6 +179,7 @@ def get_collision_rect(rect):
     """Returns a smaller rectangle for collision detection"""
     return pygame.Rect(rect.x + 10, rect.y + 10, rect.width - 20, rect.height - 20)
 
+# In check_collisions function, replace death sound line:
 def check_collisions(spits, enemies):
     global score
     spits_to_remove = set()
@@ -182,7 +193,7 @@ def check_collisions(spits, enemies):
                 spits_to_remove.add(spit_idx)
                 enemies_to_remove.add(enemy_idx)
                 score += 100
-                get_random_death_sound().play()
+                play_random_death_sound()  # Changed this line
     
     # Remove collided objects
     return (
