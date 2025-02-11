@@ -31,6 +31,14 @@ death_sounds = [
     pygame.mixer.Sound('assets/llama_death3.mp3')
 ]
 
+# Add after other sound loading
+player_death_sound = pygame.mixer.Sound('assets/llama-death.mp3')
+sad_trombone = pygame.mixer.Sound('assets/sadtrombone.mp3')
+death_sound_played = False
+death_sound_timer = 0
+game_over_font = pygame.font.Font(None, 74)
+game_over = False
+
 # After pygame.init()
 pygame.mixer.set_num_channels(16)  # Increase number of available sound channels
 available_channels = [pygame.mixer.Channel(i) for i in range(8, 16)]  # Reserve channels 8-15 for death sounds
@@ -201,10 +209,10 @@ def check_collisions(spits, enemies):
         [enemy for idx, enemy in enumerate(enemies) if idx not in enemies_to_remove]
     )
 
+# Replace check_player_hit function
 def check_player_hit(player_rect, enemy_spits):
-    global player_health, player_alive
+    global player_health, player_alive, game_over, death_sound_played
     was_hit = False
-    # Use smaller collision rect for player
     player_collision_rect = get_collision_rect(player_rect)
     
     for spit in enemy_spits:
@@ -213,10 +221,12 @@ def check_player_hit(player_rect, enemy_spits):
             was_hit = True
             enemy_spits.remove(spit)
             
-    if player_health <= 0:
+    if player_health <= 0 and player_alive:
         player_alive = False
-        return True
-    return False
+        game_over = True
+        death_sound_played = False  # Reset death sound flag
+        player_death_sound.play()
+    return False  # Don't end the game, just return false
 
 def draw_health_bar(surface, x, y, width, height, health, max_health):
     ratio = health / max_health
@@ -256,7 +266,7 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.KEYDOWN:
+        elif event.type == pygame.KEYDOWN and not game_over:  # Only allow shooting when alive
             if event.key == pygame.K_SPACE:
                 # Create new spit
                 spit_x = player_rect.centerx
@@ -279,25 +289,26 @@ while running:
                 spits.append(Spit(spit_x, spit_y, player_direction))
                 get_random_spit_sound().play()
 
-    # Get keys
+    # Get keys - only process movement if player is alive
     keys = pygame.key.get_pressed()
     moving = False
-    if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-        player_rect.x -= player_speed
-        player_direction = 'left'
-        moving = True
-    if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-        player_rect.x += player_speed
-        player_direction = 'right'
-        moving = True
-    if keys[pygame.K_UP] or keys[pygame.K_w]:
-        player_rect.y -= player_speed
-        player_direction = 'up'
-        moving = True
-    if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-        player_rect.y += player_speed
-        player_direction = 'down'
-        moving = True
+    if not game_over:  # Add this check for movement controls
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+            player_rect.x -= player_speed
+            player_direction = 'left'
+            moving = True
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            player_rect.x += player_speed
+            player_direction = 'right'
+            moving = True
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
+            player_rect.y -= player_speed
+            player_direction = 'up'
+            moving = True
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            player_rect.y += player_speed
+            player_direction = 'down'
+            moving = True
 
     # Prevent player from leaving the screen
     if player_rect.left < 0:
@@ -332,12 +343,17 @@ while running:
     for spit in enemy_spits:
         spit.update()
 
-    # Check if player is hit
-    if check_player_hit(player_rect, enemy_spits):
-        running = False  # End game when player is hit
+    # Check if player is hit (remove the running = False part)
+    check_player_hit(player_rect, enemy_spits)
 
     # Check collisions
     spits, enemies = check_collisions(spits, enemies)
+
+    # Handle death sound sequence
+    if game_over and not death_sound_played:
+        if not pygame.mixer.get_busy():  # If no sounds are playing
+            sad_trombone.play()
+            death_sound_played = True
 
     # Draw everything
     screen.blit(background_image, (0, 0))
@@ -370,6 +386,12 @@ while running:
     # Draw enemy spits
     for spit in enemy_spits:
         screen.blit(spit.image, spit.rect)
+    
+    # Draw game over text if player is dead
+    if game_over:
+        game_over_text = game_over_font.render("You Have Died!", True, (255, 0, 0))
+        text_rect = game_over_text.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
+        screen.blit(game_over_text, text_rect)
     
     pygame.display.flip()
 
