@@ -43,6 +43,10 @@ game_over = False
 pygame.mixer.set_num_channels(16)  # Increase number of available sound channels
 available_channels = [pygame.mixer.Channel(i) for i in range(8, 16)]  # Reserve channels 8-15 for death sounds
 
+# Add to font/game state variables
+restart_font = pygame.font.Font(None, 36)
+trombone_played = False
+
 def get_random_spit_sound():
     return random.choice(spit_sounds)
 
@@ -54,6 +58,19 @@ def play_random_death_sound():
         if not channel.get_busy():
             channel.play(sound)
             break
+
+def reset_game():
+    global player_health, player_alive, game_over, score
+    global death_sound_played, trombone_played, enemies, spits, enemy_spits
+    player_health = player_max_health
+    player_alive = True
+    game_over = False
+    death_sound_played = False
+    trombone_played = False
+    score = 0
+    enemies.clear()
+    spits.clear()
+    enemy_spits.clear()
 
 class Spit:
     def __init__(self, x, y, direction):
@@ -266,8 +283,10 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.KEYDOWN and not game_over:  # Only allow shooting when alive
-            if event.key == pygame.K_SPACE:
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r and game_over and trombone_played:
+                reset_game()
+            elif not game_over and event.key == pygame.K_SPACE:
                 # Create new spit
                 spit_x = player_rect.centerx
                 spit_y = player_rect.centery
@@ -354,6 +373,10 @@ while running:
         if not pygame.mixer.get_busy():  # If no sounds are playing
             sad_trombone.play()
             death_sound_played = True
+            trombone_played = False
+    elif game_over and death_sound_played and not trombone_played:
+        if not pygame.mixer.get_busy():  # If trombone finished playing
+            trombone_played = True
 
     # Draw everything
     screen.blit(background_image, (0, 0))
@@ -392,6 +415,11 @@ while running:
         game_over_text = game_over_font.render("You Have Died!", True, (255, 0, 0))
         text_rect = game_over_text.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
         screen.blit(game_over_text, text_rect)
+        
+        if trombone_played:
+            restart_text = restart_font.render("To play again hit the R key", True, (255, 255, 255))
+            restart_rect = restart_text.get_rect(center=(screen.get_width()/2, screen.get_height()/2 + 50))
+            screen.blit(restart_text, restart_rect)
     
     pygame.display.flip()
 
