@@ -2,7 +2,12 @@
 import pygame
 import random
 
-# Initialize the game
+# Modify screen size and add world size
+SCREEN_WIDTH = 1000
+SCREEN_HEIGHT = 750
+WORLD_WIDTH = 3000
+WORLD_HEIGHT = 3000
+
 pygame.init()
 pygame.font.init()
 score_font = pygame.font.Font(None, 36)  # Default font, size 36
@@ -10,7 +15,7 @@ score = 0
 pygame.mixer.music.load('assets/background-music.mp3')
 pygame.mixer.music.play(-1)  # -1 means loop indefinitely
 pygame.mixer.music.set_volume(0.5)
-screen = pygame.display.set_mode((609, 791))
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Llama Spitter")
 clock = pygame.time.Clock()
 running = True
@@ -30,6 +35,37 @@ death_sounds = [
     pygame.mixer.Sound('assets/llama_death2.mp3'),
     pygame.mixer.Sound('assets/llama_death3.mp3')
 ]
+
+# Add after loading background_image
+# Create the large world surface with tiled background
+world = pygame.Surface((WORLD_WIDTH, WORLD_HEIGHT))
+bg_width = background_image.get_width()
+bg_height = background_image.get_height()
+
+# Tile the background
+for x in range(0, WORLD_WIDTH, bg_width):
+    for y in range(0, WORLD_HEIGHT, bg_height):
+        world.blit(background_image, (x, y))
+
+# Add camera position
+camera_x = 0
+camera_y = 0
+
+def update_camera(target_rect):
+    """Update camera position to follow target"""
+    global camera_x, camera_y
+    
+    # Center the camera on the target
+    camera_x = target_rect.centerx - SCREEN_WIDTH // 2
+    camera_y = target_rect.centery - SCREEN_HEIGHT // 2
+    
+    # Keep camera within world bounds
+    camera_x = max(0, min(camera_x, WORLD_WIDTH - SCREEN_WIDTH))
+    camera_y = max(0, min(camera_y, WORLD_HEIGHT - SCREEN_HEIGHT))
+
+def world_to_screen(rect):
+    """Convert world coordinates to screen coordinates"""
+    return pygame.Rect(rect.x - camera_x, rect.y - camera_y, rect.width, rect.height)
 
 # Add after other sound loading
 player_death_sound = pygame.mixer.Sound('assets/llama-death.mp3')
@@ -267,17 +303,17 @@ while running:
         # Spawn from random edge of screen
         side = random.choice(['top', 'right', 'bottom', 'left'])
         if side == 'top':
-            x = random.randint(0, screen.get_width())
+            x = random.randint(0, WORLD_WIDTH)
             y = -80
         elif side == 'right':
-            x = screen.get_width()
-            y = random.randint(0, screen.get_height())
+            x = WORLD_WIDTH
+            y = random.randint(0, WORLD_HEIGHT)
         elif side == 'bottom':
-            x = random.randint(0, screen.get_width())
-            y = screen.get_height()
+            x = random.randint(0, WORLD_WIDTH)
+            y = WORLD_HEIGHT
         else:  # left
             x = -80
-            y = random.randint(0, screen.get_height())
+            y = random.randint(0, WORLD_HEIGHT)
         enemies.append(Enemy(x, y, player_rect))
 
     for event in pygame.event.get():
@@ -332,12 +368,12 @@ while running:
     # Prevent player from leaving the screen
     if player_rect.left < 0:
         player_rect.left = 0
-    if player_rect.right > screen.get_width():
-        player_rect.right = screen.get_width()
+    if player_rect.right > WORLD_WIDTH:
+        player_rect.right = WORLD_WIDTH
     if player_rect.top < 0:
         player_rect.top = 0
-    if player_rect.bottom > screen.get_height():
-        player_rect.bottom = screen.get_height()
+    if player_rect.bottom > WORLD_HEIGHT:
+        player_rect.bottom = WORLD_HEIGHT
 
     # Update animation frame
     if moving:
@@ -378,37 +414,44 @@ while running:
         if not pygame.mixer.get_busy():  # If trombone finished playing
             trombone_played = True
 
+    # In game loop, before drawing, add camera update
+    update_camera(player_rect)
+
     # Draw everything
-    screen.blit(background_image, (0, 0))
+    screen.fill((0, 0, 0))  # Clear screen
     
-    # Draw score
+    # Draw visible portion of world
+    visible_area = pygame.Rect(camera_x, camera_y, SCREEN_WIDTH, SCREEN_HEIGHT)
+    screen.blit(world, (0, 0), visible_area)
+    
+    # Draw score (in screen coordinates)
     score_text = score_font.render(f"Score: {score}", True, (255, 255, 255))
-    score_rect = score_text.get_rect(topright=(screen.get_width() - 10, 10))
+    score_rect = score_text.get_rect(topright=(SCREEN_WIDTH - 10, 10))
     screen.blit(score_text, score_rect)
     
     player_image = get_player_image(player_direction, int(player_frame))
-    screen.blit(player_image, player_rect.topleft)
+    screen.blit(player_image, world_to_screen(player_rect))
     
     # Draw health bar above player
     health_bar_width = 60
     health_bar_height = 8
-    health_bar_x = player_rect.centerx - health_bar_width // 2
-    health_bar_y = player_rect.top - 15
+    health_bar_x = world_to_screen(player_rect).centerx - health_bar_width // 2
+    health_bar_y = world_to_screen(player_rect).top - 15
     draw_health_bar(screen, health_bar_x, health_bar_y, 
                    health_bar_width, health_bar_height, 
                    player_health, player_max_health)
     
     # Draw spits
     for spit in spits:
-        screen.blit(spit.image, spit.rect)
+        screen.blit(spit.image, world_to_screen(spit.rect))
     
     # Draw enemies
     for enemy in enemies:
-        screen.blit(enemy.get_image(), enemy.rect.topleft)
+        screen.blit(enemy.get_image(), world_to_screen(enemy.rect))
     
     # Draw enemy spits
     for spit in enemy_spits:
-        screen.blit(spit.image, spit.rect)
+        screen.blit(spit.image, world_to_screen(spit.rect))
     
     # Draw game over text if player is dead
     if game_over:
