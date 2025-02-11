@@ -25,10 +25,17 @@ spit_sounds = [
     pygame.mixer.Sound('assets/spit2.mp3'),
     pygame.mixer.Sound('assets/spit3.mp3')
 ]
-llama_death_sound = pygame.mixer.Sound('assets/llama_death1.mp3')
+death_sounds = [
+    pygame.mixer.Sound('assets/llama_death1.mp3'),
+    pygame.mixer.Sound('assets/llama_death2.mp3'),
+    pygame.mixer.Sound('assets/llama_death3.mp3')
+]
 
 def get_random_spit_sound():
     return random.choice(spit_sounds)
+
+def get_random_death_sound():
+    return random.choice(death_sounds)
 
 class Spit:
     def __init__(self, x, y, direction):
@@ -169,7 +176,7 @@ def check_collisions(spits, enemies):
                 spits_to_remove.add(spit_idx)
                 enemies_to_remove.add(enemy_idx)
                 score += 100  # Add 100 points for each enemy hit
-                llama_death_sound.play()  # Play death sound when enemy is hit
+                get_random_death_sound().play()  # Play random death sound
     
     # Remove collided objects
     return (
