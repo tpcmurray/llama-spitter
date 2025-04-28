@@ -122,7 +122,6 @@ class Spit:
         }[direction]
         # Rotate image once when created
         self.image = pygame.transform.rotate(spit_image, self.rotation)
-        
     def update(self):
         if self.direction == 'right':
             self.rect.x += self.speed
@@ -132,10 +131,11 @@ class Spit:
             self.rect.y -= self.speed
         elif self.direction == 'down':
             self.rect.y += self.speed
-
-    def is_off_screen(self, screen_width, screen_height):
-        return (self.rect.right < 0 or self.rect.left > screen_width or
-                self.rect.bottom < 0 or self.rect.top > screen_height)
+            
+    def is_off_screen(self, world_width, world_height):
+        # Check against world boundaries instead of screen boundaries
+        return (self.rect.right < 0 or self.rect.left > world_width or
+                self.rect.bottom < 0 or self.rect.top > world_height)
 
 class EnemySpit(Spit):
     def __init__(self, x, y, direction):
@@ -379,10 +379,8 @@ while running:
     if moving:
         player_frame -= player_animation_speed
         if player_frame <= 0:
-            player_frame = 4
-
-    # Update and remove off-screen spits
-    spits = [spit for spit in spits if not spit.is_off_screen(screen.get_width(), screen.get_height())]
+            player_frame = 4    # Update and remove off-screen spits
+    spits = [spit for spit in spits if not spit.is_off_screen(WORLD_WIDTH, WORLD_HEIGHT)]
     for spit in spits:
         spit.update()
 
@@ -394,7 +392,7 @@ while running:
             enemy_spits.append(EnemySpit(spit_x, spit_y, enemy.direction))
 
     # Update enemy spits
-    enemy_spits = [spit for spit in enemy_spits if not spit.is_off_screen(screen.get_width(), screen.get_height())]
+    enemy_spits = [spit for spit in enemy_spits if not spit.is_off_screen(WORLD_WIDTH, WORLD_HEIGHT)]
     for spit in enemy_spits:
         spit.update()
 
