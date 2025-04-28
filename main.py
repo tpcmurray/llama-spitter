@@ -113,24 +113,41 @@ class Spit:
         self.rect = pygame.Rect(x, y, 32, 32)  # Adjust size as needed
         self.direction = direction
         self.speed = 7
-        # Add rotation angles for each direction
+        # Add rotation angles for each direction including diagonals
         self.rotation = {
             'up': 180,
+            'up-right': 135,
             'right': 90,
+            'down-right': 45,
             'down': 0,
-            'left': 270
+            'down-left': 315,
+            'left': 270,
+            'up-left': 225
         }[direction]
         # Rotate image once when created
         self.image = pygame.transform.rotate(spit_image, self.rotation)
     def update(self):
-        if self.direction == 'right':
+        if 'right' in self.direction and 'up' not in self.direction and 'down' not in self.direction:
             self.rect.x += self.speed
-        elif self.direction == 'left':
+        elif 'left' in self.direction and 'up' not in self.direction and 'down' not in self.direction:
             self.rect.x -= self.speed
-        elif self.direction == 'up':
+        elif 'up' in self.direction and 'left' not in self.direction and 'right' not in self.direction:
             self.rect.y -= self.speed
-        elif self.direction == 'down':
+        elif 'down' in self.direction and 'left' not in self.direction and 'right' not in self.direction:
             self.rect.y += self.speed
+        # Add diagonal movement
+        elif self.direction == 'up-right':
+            self.rect.x += self.speed * 0.7071  # cos(45°)
+            self.rect.y -= self.speed * 0.7071  # sin(45°)
+        elif self.direction == 'up-left':
+            self.rect.x -= self.speed * 0.7071
+            self.rect.y -= self.speed * 0.7071
+        elif self.direction == 'down-right':
+            self.rect.x += self.speed * 0.7071
+            self.rect.y += self.speed * 0.7071
+        elif self.direction == 'down-left':
+            self.rect.x -= self.speed * 0.7071
+            self.rect.y += self.speed * 0.7071
             
     def is_off_screen(self, world_width, world_height):
         # Check against world boundaries instead of screen boundaries
@@ -240,7 +257,13 @@ player_health = player_max_health
 player_alive = True
 
 def get_player_image(direction, frame):
-    row = {'up': 0, 'left': 1, 'down': 2, 'right': 3}[direction]
+    # For diagonal directions, use the primary direction's animation
+    base_direction = direction
+    if '-' in direction:
+        # Extract primary direction (first part of diagonal)
+        base_direction = direction.split('-')[0]
+    
+    row = {'up': 0, 'left': 1, 'down': 2, 'right': 3}[base_direction]
     col = frame % 4
     return player_sheet.subsurface(pygame.Rect(col * 80, row * 80, 80, 80))
 
@@ -348,9 +371,22 @@ while running:
                 elif player_direction == 'up':
                     spit_x -= 15
                     spit_y -= 45
+                # Add diagonal spit positions
+                elif player_direction == 'up-right':
+                    spit_x += 0
+                    spit_y -= 40
+                elif player_direction == 'up-left':
+                    spit_x -= 25
+                    spit_y -= 40
+                elif player_direction == 'down-right':
+                    spit_x += 0
+                    spit_y -= 25
+                elif player_direction == 'down-left':
+                    spit_x -= 25
+                    spit_y -= 25
 
                 spits.append(Spit(spit_x, spit_y, player_direction))
-                get_random_spit_sound().play()    # Get keys - only process movement if player is alive
+                get_random_spit_sound().play()
     keys = pygame.key.get_pressed()
     moving = False
     
@@ -381,23 +417,44 @@ while running:
         # Apply sprint multiplier if active
         if sprint_active:
             current_speed *= sprint_speed_multiplier
-            
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+        
+        # Track movement in each direction
+        move_left = keys[pygame.K_LEFT] or keys[pygame.K_a]
+        move_right = keys[pygame.K_RIGHT] or keys[pygame.K_d]
+        move_up = keys[pygame.K_UP] or keys[pygame.K_w]
+        move_down = keys[pygame.K_DOWN] or keys[pygame.K_s]
+        
+        # Update player position based on movement
+        if move_left:
             player_rect.x -= current_speed
-            player_direction = 'left'
             moving = True
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        if move_right:
             player_rect.x += current_speed
-            player_direction = 'right'
             moving = True
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
+        if move_up:
             player_rect.y -= current_speed
-            player_direction = 'up'
             moving = True
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+        if move_down:
             player_rect.y += current_speed
-            player_direction = 'down'
             moving = True
+            
+        # Set player direction based on combination of keys pressed
+        if move_up and move_right:
+            player_direction = 'up-right'
+        elif move_up and move_left:
+            player_direction = 'up-left'
+        elif move_down and move_right:
+            player_direction = 'down-right'
+        elif move_down and move_left:
+            player_direction = 'down-left'
+        elif move_left:
+            player_direction = 'left'
+        elif move_right:
+            player_direction = 'right'
+        elif move_up:
+            player_direction = 'up'
+        elif move_down:
+            player_direction = 'down'
 
     # Prevent player from leaving the screen
     if player_rect.left < 0:
