@@ -3,8 +3,8 @@ import pygame
 import random
 
 # Modify screen size and add world size
-SCREEN_WIDTH = 1000
-SCREEN_HEIGHT = 750
+SCREEN_WIDTH = 1200
+SCREEN_HEIGHT = 900
 WORLD_WIDTH = 3000
 WORLD_HEIGHT = 3000
 
@@ -226,6 +226,14 @@ spawn_delay = 120  # Frames between enemy spawns
 enemy_spits = []
 player_alive = True
 
+# Sprint settings
+sprint_available = True
+sprint_cooldown = 90  # 2 seconds (60 frames per second * 2)
+sprint_duration = 18   # 300ms (60 frames per second * 0.3)
+sprint_timer = 0
+sprint_active = False
+sprint_speed_multiplier = 3.0
+
 # Add after player settings
 player_max_health = 100
 player_health = player_max_health
@@ -342,26 +350,52 @@ while running:
                     spit_y -= 45
 
                 spits.append(Spit(spit_x, spit_y, player_direction))
-                get_random_spit_sound().play()
-
-    # Get keys - only process movement if player is alive
+                get_random_spit_sound().play()    # Get keys - only process movement if player is alive
     keys = pygame.key.get_pressed()
     moving = False
+    
+    # Handle sprint logic
+    if sprint_active:
+        sprint_timer += 1
+        if sprint_timer >= sprint_duration:
+            sprint_active = False
+            sprint_timer = 0
+    elif not sprint_available:
+        sprint_timer += 1
+        if sprint_timer >= sprint_cooldown:
+            sprint_available = True
+            sprint_timer = 0
+    
     if not game_over:  # Add this check for movement controls
+        # Check for sprint activation
+        current_speed = player_speed
+        if keys[pygame.K_LSHIFT] and sprint_available and not sprint_active and (
+            keys[pygame.K_LEFT] or keys[pygame.K_RIGHT] or 
+            keys[pygame.K_UP] or keys[pygame.K_DOWN] or
+            keys[pygame.K_a] or keys[pygame.K_d] or
+            keys[pygame.K_w] or keys[pygame.K_s]):
+            sprint_active = True
+            sprint_available = False
+            sprint_timer = 0
+            
+        # Apply sprint multiplier if active
+        if sprint_active:
+            current_speed *= sprint_speed_multiplier
+            
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            player_rect.x -= player_speed
+            player_rect.x -= current_speed
             player_direction = 'left'
             moving = True
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            player_rect.x += player_speed
+            player_rect.x += current_speed
             player_direction = 'right'
             moving = True
         if keys[pygame.K_UP] or keys[pygame.K_w]:
-            player_rect.y -= player_speed
+            player_rect.y -= current_speed
             player_direction = 'up'
             moving = True
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            player_rect.y += player_speed
+            player_rect.y += current_speed
             player_direction = 'down'
             moving = True
 
