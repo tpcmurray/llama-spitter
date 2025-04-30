@@ -40,6 +40,10 @@ class Settings:
     # Score settings
     ENEMIES_FOR_POTION = 20
     ENEMY_KILL_SCORE = 100
+    
+    # Difficulty settings
+    DIFFICULTY_INCREASE_TIME = 1200  # 20 seconds (60 frames * 20)
+    DIFFICULTY_INCREASE_RATE = 0.8  # 20% faster (multiply by 0.8)
 
 
 class AssetManager:
@@ -304,7 +308,7 @@ class Player(Entity):
             spit_y -= 25
         elif self.direction == 'down-left':
             spit_x -= 25
-            spit_y -= 25
+            spit_y += 25
             
         return spit_x, spit_y
         
@@ -510,6 +514,12 @@ class UI:
         score_text = self.score_font.render(f"Score: {score}", True, (255, 255, 255))
         score_rect = score_text.get_rect(topright=(Settings.SCREEN_WIDTH - 10, 10))
         screen.blit(score_text, score_rect)
+    
+    def draw_difficulty(self, screen, difficulty_level):
+        """Draw difficulty level in the top-left corner"""
+        difficulty_text = self.score_font.render(f"Difficulty: {difficulty_level}", True, (255, 255, 255))
+        difficulty_rect = difficulty_text.get_rect(topleft=(10, 10))
+        screen.blit(difficulty_text, difficulty_rect)
         
     def draw_health_bar(self, screen, x, y, width, height, health, max_health):
         """Draw health bar with specified dimensions"""
@@ -601,6 +611,10 @@ class Game:
         self.spawn_timer = 0
         self.spawn_delay = Settings.ENEMY_SPAWN_DELAY
         
+        # Difficulty progression
+        self.difficulty_timer = 0
+        self.difficulty_level = 1  # Starting at level 1
+        
         self.init_game()
         
     def init_game(self):
@@ -628,6 +642,11 @@ class Game:
         self.game_over = False
         self.death_sound_played = False
         self.trombone_played = False
+        
+        # Reset difficulty
+        self.difficulty_timer = 0
+        self.difficulty_level = 1
+        self.spawn_delay = Settings.ENEMY_SPAWN_DELAY
         
         # Start background music
         self.sound_manager.play_background_music()
@@ -673,6 +692,17 @@ class Game:
     def update(self):
         """Update game state"""
         if not self.game_over:
+            # Update difficulty timer
+            self.difficulty_timer += 1
+            if self.difficulty_timer >= Settings.DIFFICULTY_INCREASE_TIME:
+                # Reset timer
+                self.difficulty_timer = 0
+                
+                # Increase difficulty
+                self.difficulty_level += 1
+                self.spawn_delay = int(self.spawn_delay * Settings.DIFFICULTY_INCREASE_RATE)
+                self.spawn_delay = max(10, self.spawn_delay)  # Ensure it doesn't go too low
+                
             # Update spawn timer and create new enemies
             self.spawn_timer += 1
             if self.spawn_timer >= self.spawn_delay:
@@ -838,6 +868,7 @@ class Game:
             
         # Draw UI elements
         self.ui.draw_score(self.screen, self.score)
+        self.ui.draw_difficulty(self.screen, self.difficulty_level)
         
         # Draw game over screen if needed
         if self.game_over:
